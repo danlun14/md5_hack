@@ -1,8 +1,10 @@
 #include "md5/md5.h"
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 void helpMsg()
 {
@@ -15,7 +17,7 @@ void helpMsg()
 uint8_t* hashStoh(char* source)
 {
     int source_len = strlen(source);
-    printf("%d\n", source_len);
+    // printf("%d\n", source_len);
     uint8_t* hash;
     if (source_len == 32)
     {
@@ -77,17 +79,41 @@ int hashcmp(uint8_t* hashA, uint8_t* hashB)
     return 0;
 }
 
-void get_word(const char* alphabet, int word_num, int word_len, char* word)
+void get_word(const char* alphabet, int word_spec, int word_len, char* word_dest)
 {
     int alphabet_size = strlen(alphabet);
 
     for (int i = word_len - 1; i >= 0; i--)
     {
-        word[i] = alphabet[word_num % alphabet_size];
-        word_num /= alphabet_size;
+        word_dest[i] = alphabet[word_spec % alphabet_size];
+        word_spec /= alphabet_size;
     }
 
-    word[word_len] = '\0';
+    word_dest[word_len] = '\0';
+}
+
+void md5Hack(const char* alphabet, const int word_len, int lb, long ub, uint8_t* hash_exp)
+{
+    char* word = malloc(word_len * sizeof(char));
+    int in = 0;
+    for (long i = lb; i <= ub; i++)
+    {
+        get_word(alphabet, i, word_len, word);
+        uint8_t* hash = md5String(word);
+
+        if (!hashcmp(hash, hash_exp))
+        {
+            printf("%s\n", word);
+        }
+        in = i;
+
+        // debug
+        /*if (i % 1000000 == 0)
+        {
+             printf("%ld-> %ld\n", i, ub);
+        }*/
+    }
+    printf("%d\n", in);
 }
 
 int main(int argc, char* argv[])
@@ -99,9 +125,12 @@ int main(int argc, char* argv[])
     }
     int string_size = atoi(argv[3]);
     const char* alphabet = argv[2];
-    printf("%s\n", alphabet);
+    // printf("%s\n", alphabet);
     uint8_t* hash = hashStoh(argv[1]);
-    print_hash(hash);
-    hash = md5String("Hello, World!");
-    print_hash(hash);
+    //
+    hash = md5String("asdfsdfasfsdf");
+    // print_hash(hash);
+    long ub = powl(strlen(alphabet), string_size) - 1;
+    md5Hack(alphabet, string_size, 0, ub, hash);
+    // print_hash(hash);
 }
