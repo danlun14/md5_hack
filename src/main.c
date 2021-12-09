@@ -1,3 +1,4 @@
+#include "md5/md5.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,11 +72,11 @@ int main(int argc, char* argv[])
         helpMsg();
         return 0;
     }
-    printf("sadasdsadsadasdadadsqadaefweradkjfbalsfdhhkbadfhjkblghbkagfhbklgasa"
-           "sdgarfgbtehgetrahbeathbHGBsrfreagregarefbgrsaefbgversafgbvreasfgvbr"
-           "efsdgbklahj");
     int string_size = atoi(argv[3]);
     const char* alphabet = argv[2];
+    printf("%s\n", alphabet);
     uint8_t* hash = hashStoh(argv[1]);
+    print_hash(hash);
+    hash = md5String("Hello, World!");
     print_hash(hash);
 }
