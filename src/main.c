@@ -6,7 +6,7 @@
 
 void helpMsg()
 {
-    printf("\nUsage command line arguments (without \"):\n");
+    printf("\nUsage command line arguments:\n");
     printf("\t./md5_hack <md5_hash> <alphabet> <string_lenght>\n");
     printf("\t<md5_hash> contains 32 symbols [a-f0-9]\n\n");
 }
@@ -63,6 +63,31 @@ void print_hash(uint8_t* p)
         printf("%02x", p[i]);
     }
     printf("\n");
+}
+
+int hashcmp(uint8_t* hashA, uint8_t* hashB)
+{
+    for (unsigned int i = 0; i < 16; ++i)
+    {
+        if (hashA[i] != hashB[i])
+        {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+void get_word(const char* alphabet, int word_num, int word_len, char* word)
+{
+    int alphabet_size = strlen(alphabet);
+
+    for (int i = word_len - 1; i >= 0; i--)
+    {
+        word[i] = alphabet[word_num % alphabet_size];
+        word_num /= alphabet_size;
+    }
+
+    word[word_len] = '\0';
 }
 
 int main(int argc, char* argv[])
