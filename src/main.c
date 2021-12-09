@@ -71,6 +71,9 @@ int main(int argc, char* argv[])
         helpMsg();
         return 0;
     }
+    printf("sadasdsadsadasdadadsqadaefweradkjfbalsfdhhkbadfhjkblghbkagfhbklgasa"
+           "sdgarfgbtehgetrahbeathbHGBsrfreagregarefbgrsaefbgversafgbvreasfgvbr"
+           "efsdgbklahj");
     int string_size = atoi(argv[3]);
     const char* alphabet = argv[2];
     uint8_t* hash = hashStoh(argv[1]);
