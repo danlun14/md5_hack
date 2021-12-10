@@ -1,3 +1,4 @@
 bin/md5
 bin/md5_hack
 .vscode
+slurm-*

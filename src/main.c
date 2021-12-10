@@ -7,14 +7,7 @@
 #include <string.h>
 #include <time.h>
 
-struct programm_stat
-{
-    double t_md5;
-    double t_get_word;
-    double t_cmp;
-};
-
-void helpMsg()
+void help_msg()
 {
     fprintf(stderr, "\nUsage command line arguments:\n");
     fprintf(stderr, "\t./md5_hack <md5_hash> <alphabet> <string_lenght>\n");
@@ -25,7 +18,6 @@ void helpMsg()
 uint8_t* hashStoh(char* source)
 {
     int source_len = strlen(source);
-    // printf("%d\n", source_len);
     uint8_t* hash;
     if (source_len == 32)
     {
@@ -99,43 +91,49 @@ void get_word(const char* alphabet, int word_spec, int word_len, char* word_dest
     word_dest[word_len] = '\0';
 }
 
-struct programm_stat md5Hack(const char* alphabet, const int word_len, int lb, long ub, uint8_t* hash_exp)
+int md5_hack(const char* alphabet, const int word_len, long long lb, long long ub, uint8_t* hash_exp)
 {
-    struct programm_stat stat;
-    clock_t A = 0, B = 0, C = 0;
+    printf("%ld\n", sizeof(long long));
     char* word = malloc(word_len * sizeof(char));
-    int in = 0;
-    for (long i = lb; i <= ub; i++)
+    int matches = 0;
+    for (long long i = lb; i <= ub; i++)
     {
-        A -= clock();
         get_word(alphabet, i, word_len, word);
-        A += clock();
 
-        B -= clock();
         uint8_t* hash = md5String(word);
-        B += clock();
-
-        C -= clock();
         if (!hashcmp(hash, hash_exp))
         {
-            printf("%s\n", word);
+            printf("Found a match: [%s] %lld\n", word, i);
+            matches += 1;
         }
-        C += clock();
-        in = i;
-
-        // debug
-        /*if (i % 1000000 == 0)
-        {
-             printf("%ld-> %ld\n", i, ub);
-        }*/
     }
-    stat.t_get_word = (double)A / CLOCKS_PER_SEC;
-    stat.t_md5 = (double)B / CLOCKS_PER_SEC;
-    stat.t_cmp = (double)C / CLOCKS_PER_SEC;
-    printf("%d, %lf, %lf, %lf\n", in + 1, stat.t_get_word, stat.t_md5, stat.t_cmp);
-    return stat;
+    return matches;
 }
-
+void get_chunk(long long a, long long b, int commsize, int rank, long long* lb, long long* ub)
+{
+    /* OpenMP 4.0 spec (Sec. 2.7.1, default schedule for loops)
+     * For a team of commsize processes and a sequence of n items, let ceil(n ? commsize) be the integer q
+     * that satisfies n = commsize * q - r, with 0 <= r < commsize.
+     * Assign q iterations to the first commsize - r procs, and q - 1 iterations to the remaining r processes */
+    long n = b - a + 1;
+    long q = n / commsize;
+    if (n % commsize)
+        q++;
+    long r = commsize * q - n;
+    /* Compute chunk size for the process */
+    long chunk = q;
+    if (rank >= commsize - r)
+        chunk = q - 1;
+    *lb = a; /* Determine start item for the process */
+    if (rank > 0)
+    { /* Count sum of previous chunks */
+        if (rank <= commsize - r)
+            *lb += q * rank;
+        else
+            *lb += q * (commsize - r) + (q - 1) * (rank - (commsize - r));
+    }
+    *ub = *lb + chunk - 1;
+}
 int main(int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
@@ -155,7 +153,7 @@ int main(int argc, char* argv[])
     {
         if (argc != 4)
         {
-            helpMsg();
+            help_msg();
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
         alphabet = argv[2];
@@ -164,7 +162,7 @@ int main(int argc, char* argv[])
         hash = hashStoh(argv[1]);
         if (!hash)
         {
-            helpMsg();
+            help_msg();
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
         print_hash(hash);
@@ -194,11 +192,15 @@ int main(int argc, char* argv[])
         hash = hh;
     }
 
-    // long ub = powl(strlen(alphabet), string_size) - 1;
-    // md5Hack(alphabet, string_size, 0, ub, hash);
+    long long lb, ub;
+    long long comb_count = powl(strlen(alphabet), string_size);
+    get_chunk(0, comb_count - 1, commsize, rank, &lb, &ub);
+
+    int matches = md5_hack(alphabet, string_size, lb, ub, hash);
+
     ttotal += MPI_Wtime();
-    printf("On proc %d (Time - %lf): alp - %s; word lenght - %d; hash: ", rank, ttotal, alphabet, string_size);
-    print_hash(hash);
+
+    printf("On proc %d %d matches: %lld -> %lld ; time - %lf\n", rank, matches, lb, ub, ttotal);
 
     free(hash);
     if (rank != 0)
