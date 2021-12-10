@@ -1,0 +1,8 @@
+#!/bin/bash
+
+#SBATCH --nodes=1 --ntasks-per-node=4
+#SBATCH --job-name=md5_hack
+
+cd $SLURM_SUBMIT_DIR
+
+mpiexec ./bin/md5_hack 0123456789abcdef0123456789abcdef asdasdfasd 4

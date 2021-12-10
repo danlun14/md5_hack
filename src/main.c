@@ -1,5 +1,6 @@
 #include "md5/md5.h"
 #include <math.h>
+#include <mpi.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,9 +16,9 @@ struct programm_stat
 
 void helpMsg()
 {
-    printf("\nUsage command line arguments:\n");
-    printf("\t./md5_hack <md5_hash> <alphabet> <string_lenght>\n");
-    printf("\t<md5_hash> contains 32 symbols [a-f0-9]\n\n");
+    fprintf(stderr, "\nUsage command line arguments:\n");
+    fprintf(stderr, "\t./md5_hack <md5_hash> <alphabet> <string_lenght>\n");
+    fprintf(stderr, "\t<md5_hash> contains 32 symbols [a-f0-9]\n\n");
 }
 
 // hash string to hex(int)
@@ -43,7 +44,7 @@ uint8_t* hashStoh(char* source)
             else
             {
                 free(hash);
-                exit(0);
+                return NULL;
             }
 
             int id = i / 2;
@@ -59,7 +60,7 @@ uint8_t* hashStoh(char* source)
     }
     else
     {
-        exit(0);
+        return NULL;
     }
     return hash;
 }
@@ -98,8 +99,7 @@ void get_word(const char* alphabet, int word_spec, int word_len, char* word_dest
     word_dest[word_len] = '\0';
 }
 
-struct programm_stat
-md5Hack(const char* alphabet, const int word_len, int lb, long ub, uint8_t* hash_exp)
+struct programm_stat md5Hack(const char* alphabet, const int word_len, int lb, long ub, uint8_t* hash_exp)
 {
     struct programm_stat stat;
     clock_t A = 0, B = 0, C = 0;
@@ -138,16 +138,75 @@ md5Hack(const char* alphabet, const int word_len, int lb, long ub, uint8_t* hash
 
 int main(int argc, char* argv[])
 {
-    if (argc != 4)
+    MPI_Init(&argc, &argv);
+
+    double ttotal = -MPI_Wtime();
+
+    int rank;
+    int commsize;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &commsize);
+    int string_size;
+    char* alphabet;
+    int alphabet_size;
+    uint8_t* hash;
+    // Broadcast command line arguments
+    if (rank == 0)
     {
-        helpMsg();
-        return 0;
+        if (argc != 4)
+        {
+            helpMsg();
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+        alphabet = argv[2];
+        alphabet_size = strlen(alphabet);
+        string_size = atoi(argv[3]);
+        hash = hashStoh(argv[1]);
+        if (!hash)
+        {
+            helpMsg();
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+        print_hash(hash);
+        MPI_Bcast(&alphabet_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(alphabet, alphabet_size, MPI_CHAR, 0, MPI_COMM_WORLD);
+
+        MPI_Bcast(&string_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        MPI_Bcast(hash, 16, MPI_UINT8_T, 0, MPI_COMM_WORLD);
     }
-    int string_size = atoi(argv[3]);
-    const char* alphabet = argv[2];
-    // printf("%s\n", alphabet);
-    uint8_t* hash = hashStoh(argv[1]);
-    long ub = powl(strlen(alphabet), string_size) - 1;
-    md5Hack(alphabet, string_size, 0, ub, hash);
-    // print_hash(hash);
+    else
+    {
+        char* alp;
+        int alp_size;
+        int str_size;
+        uint8_t* hh = malloc(16 * sizeof(uint8_t));
+
+        MPI_Bcast(&alp_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        alp = malloc(alp_size * sizeof(char) + 1);
+        MPI_Bcast(alp, alp_size, MPI_CHAR, 0, MPI_COMM_WORLD);
+        alp[alp_size] = '\0';
+        MPI_Bcast(&str_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(hh, 16, MPI_UINT8_T, 0, MPI_COMM_WORLD);
+
+        alphabet = alp;
+        string_size = str_size;
+        hash = hh;
+    }
+
+    // long ub = powl(strlen(alphabet), string_size) - 1;
+    // md5Hack(alphabet, string_size, 0, ub, hash);
+    ttotal += MPI_Wtime();
+    printf("On proc %d (Time - %lf): alp - %s; word lenght - %d; hash: ", rank, ttotal, alphabet, string_size);
+    print_hash(hash);
+
+    free(hash);
+    if (rank != 0)
+    {
+        free(alphabet);
+    }
+
+    MPI_Finalize();
+
+    return EXIT_SUCCESS;
 }
