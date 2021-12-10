@@ -21,7 +21,7 @@ uint8_t* hashStoh(char* source)
     uint8_t* hash;
     if (source_len == 32)
     {
-        hash = malloc(16);
+        hash = malloc(16 * sizeof(uint8_t));
         for (int i = 0; i < 32; i++)
         {
             int value = 0;
@@ -78,7 +78,7 @@ int hashcmp(uint8_t* hashA, uint8_t* hashB)
     return 0;
 }
 
-void get_word(const char* alphabet, int word_spec, int word_len, char* word_dest)
+void get_word(const char* alphabet, long word_spec, int word_len, char* word_dest)
 {
     int alphabet_size = strlen(alphabet);
 
@@ -93,7 +93,6 @@ void get_word(const char* alphabet, int word_spec, int word_len, char* word_dest
 
 int md5_hack(const char* alphabet, const int word_len, long long lb, long long ub, uint8_t* hash_exp)
 {
-    printf("%ld\n", sizeof(long long));
     char* word = malloc(word_len * sizeof(char));
     int matches = 0;
     for (long long i = lb; i <= ub; i++)
@@ -106,6 +105,7 @@ int md5_hack(const char* alphabet, const int word_len, long long lb, long long u
             printf("Found a match: [%s] %lld\n", word, i);
             matches += 1;
         }
+        free(hash);
     }
     return matches;
 }
@@ -165,13 +165,14 @@ int main(int argc, char* argv[])
             help_msg();
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-        print_hash(hash);
         MPI_Bcast(&alphabet_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(alphabet, alphabet_size, MPI_CHAR, 0, MPI_COMM_WORLD);
 
         MPI_Bcast(&string_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
         MPI_Bcast(hash, 16, MPI_UINT8_T, 0, MPI_COMM_WORLD);
+
+        // print_hash(hash);
     }
     else
     {
@@ -200,12 +201,18 @@ int main(int argc, char* argv[])
 
     ttotal += MPI_Wtime();
 
-    printf("On proc %d %d matches: %lld -> %lld ; time - %lf\n", rank, matches, lb, ub, ttotal);
+    double Tmax;
+    MPI_Reduce(&ttotal, &Tmax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    // printf("On proc %d %d matches: %lld -> %lld ; time - %lf\n", rank, matches, lb, ub, ttotal);
 
     free(hash);
     if (rank != 0)
     {
         free(alphabet);
+    }
+    else
+    {
+        printf("procs |    time\n%5d     %5.5lf\n", commsize, Tmax);
     }
 
     MPI_Finalize();

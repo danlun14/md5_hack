@@ -1,0 +1,1 @@
+sbatch --nodes=$1 --ntasks-per-node=$2 task.job
