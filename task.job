@@ -4,4 +4,4 @@
 
 cd $SLURM_SUBMIT_DIR
 
-mpiexec ./bin/md5_hack 6e312c913a4113dc44d729871a300463 "md5piqw" 6
+mpiexec ./bin/md5_hack bd8bc36eb41bc90c585ae7e902e9e284 "dirscuon" 10

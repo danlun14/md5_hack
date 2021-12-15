@@ -16,7 +16,7 @@ set yrange [7:64]
 set xtics 8
 set ytics 8
 
-plot 'speedup.txt' using 1:2 with linespoints lw 1 lt rgb 'blue' title 'MD5 hack(alphabet size=6, word lenght=10)', \
- 'speedup.txt' using 1:3 with linespoints lw 1 lt rgb 'red' title 'MD5 hack(alphabet size=12, word lenght=8)', \
- 'speedup.txt' using 1:4 with linespoints lw 1 lt rgb 'green' title 'MD5 hack(alphabet size=37, word lenght=5)', \
+plot 'speedup.txt' using 1:2 with linespoints lw 1 lt rgb 'blue' title 'MD5 hack (alphabet size =   6, word lenght = 10)', \
+ 'speedup.txt' using 1:3 with linespoints lw 1 lt rgb 'red' title 'MD5 hack (alphabet size = 12, word lenght =   8)', \
+ 'speedup.txt' using 1:4 with linespoints lw 1 lt rgb 'green' title 'MD5 hack (alphabet size = 37, word lenght =   5)', \
  'speedup.txt' using 1:1 with linespoints lw 1 lt rgb 'black' title 'Linear speedup'
